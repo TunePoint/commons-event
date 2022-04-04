@@ -1,0 +1,70 @@
+plugins {
+    id 'org.springframework.boot' version '2.6.6'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id 'java'
+    id 'maven-publish'
+}
+
+group = 'ua.tunepoint'
+version = '0.0.3'
+sourceCompatibility = '17'
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.kafka:spring-kafka'
+    implementation 'org.springframework:spring-aspects:5.3.18'
+
+    compileOnly 'org.projectlombok:lombok'
+    runtimeOnly 'org.aspectj:aspectjweaver:1.9.9.1'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+bootJar {
+    enabled false
+}
+
+jar {
+    archiveName "${project.name}.jar"
+    archiveClassifier.set("")
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            groupId project.group
+            artifactId project.name
+            version project.version
+
+            artifact jar
+        }
+    }
+
+    repositories {
+        maven {
+            name  'reposilite'
+            url "http://${System.getenv('ARTIFACTORY_HOST')}/${System.getenv('ARTIFACTORY_REPOSITORY')}"
+            allowInsecureProtocol true
+
+            credentials {
+                username System.getenv('ARTIFACTORY_USERNAME')
+                password System.getenv('ARTIFACTORY_PASSWORD')
+            }
+        }
+    }
+}
