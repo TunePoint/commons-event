@@ -1,4 +1,7 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
 plugins {
+    id 'org.springframework.boot'
     id 'java-library'
     id 'maven-publish'
 }
@@ -21,6 +24,11 @@ dependencies {
     testImplementation 'org.projectlombok:lombok'
 }
 
+bootJar {
+    enabled false
+}
+
 jar {
+    enabled true
     archiveName "${project.name}.jar"
 }
