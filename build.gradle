@@ -7,9 +7,10 @@ plugins {
     id 'maven-publish'
 }
 
-group = 'ua.tunepoint'
-version = '0.0.3'
-sourceCompatibility = '17'
+allprojects {
+    group = 'ua.tunepoint'
+    version = '0.0.3'
+}
 
 configurations {
     compileOnly {
