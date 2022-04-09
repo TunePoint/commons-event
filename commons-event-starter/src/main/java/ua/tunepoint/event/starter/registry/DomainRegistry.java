@@ -40,6 +40,6 @@ public class DomainRegistry {
     }
 
     public Set<String> domainsWithRelation(DomainRelation domainRelation) {
-        return Collections.unmodifiableSet(domainRelationRegistry.get(domainRelation));
+        return Collections.unmodifiableSet(domainRelationRegistry.getOrDefault(domainRelation, Collections.emptySet()));
     }
 }

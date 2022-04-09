@@ -7,8 +7,8 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -24,19 +24,20 @@ import org.springframework.kafka.listener.MessageListenerContainer;
 import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
-import ua.tunepoint.event.starter.handler.DomainEventHandlers;
-import ua.tunepoint.event.starter.registry.DomainRegistry;
 import ua.tunepoint.event.starter.DomainRelation;
+import ua.tunepoint.event.starter.handler.DomainEventHandlers;
 import ua.tunepoint.event.starter.kafka.KafkaEventConsumer;
 import ua.tunepoint.event.starter.kafka.KafkaEventPublisher;
 import ua.tunepoint.event.starter.kafka.message.Message;
 import ua.tunepoint.event.starter.publisher.EventPublisher;
+import ua.tunepoint.event.starter.registry.DomainRegistry;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
 @ConditionalOnBean({ DomainEventHandlers.class, DomainRegistry.class })
+@EnableConfigurationProperties(EventProperties.class)
 public class EventSourceAutoConfiguration {
 
     @Autowired
@@ -45,11 +46,8 @@ public class EventSourceAutoConfiguration {
     @Autowired
     private DomainEventHandlers domainEventHandlers;
 
-    @Value("${kafka.bootstrap-servers}")
-    private String bootstrapServers;
-
-    @Value("${spring.application.name}")
-    private String applicationName;
+    @Autowired
+    private EventProperties eventProperties;
 
     private final ObjectMapper objectMapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -87,8 +85,8 @@ public class EventSourceAutoConfiguration {
     @Bean
     public Map<String, Object> consumerProperties() {
         Map<String, Object> props = new HashMap<>();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, applicationName);
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, eventProperties.getBootstrapServers());
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, eventProperties.getServiceName());
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
 
         return props;
@@ -114,7 +112,7 @@ public class EventSourceAutoConfiguration {
     @Bean
     public Map<String, Object> producerProperties() {
         Map<String, Object> props = new HashMap<>();
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, eventProperties.getBootstrapServers());
         props.put(ProducerConfig.RETRIES_CONFIG, 3);
 
         return props;

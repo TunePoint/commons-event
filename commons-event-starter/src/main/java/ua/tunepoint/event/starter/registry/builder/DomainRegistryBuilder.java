@@ -1,7 +1,8 @@
-package ua.tunepoint.event.starter.registry;
+package ua.tunepoint.event.starter.registry.builder;
 
 import ua.tunepoint.event.model.DomainEventType;
 import ua.tunepoint.event.starter.DomainRelation;
+import ua.tunepoint.event.starter.registry.DomainRegistry;
 
 import java.util.Set;
 
