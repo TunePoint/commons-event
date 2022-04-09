@@ -1,3 +1,5 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
 plugins {
     id 'org.springframework.boot' version '2.6.6'
     id 'io.spring.dependency-management' version '1.0.11.RELEASE'
@@ -19,51 +21,77 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter'
-    implementation 'org.springframework.kafka:spring-kafka'
-    implementation 'org.springframework:spring-aspects:5.3.18'
+subprojects {
 
-    compileOnly 'org.projectlombok:lombok'
-    runtimeOnly 'org.aspectj:aspectjweaver:1.9.9.1'
-    annotationProcessor 'org.projectlombok:lombok'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.kafka:spring-kafka-test'
-}
+    apply plugin: 'java-library'
+    apply plugin: "io.spring.dependency-management"
+    apply plugin: 'maven-publish'
 
-tasks.named('test') {
-    useJUnitPlatform()
-}
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(17)
+        }
+    }
 
-bootJar {
-    enabled false
-}
-
-jar {
-    archiveName "${project.name}.jar"
-    archiveClassifier.set("")
-}
-
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            groupId project.group
-            artifactId project.name
-            version project.version
-
-            artifact jar
+    configurations {
+        compileOnly {
+            extendsFrom annotationProcessor
         }
     }
 
     repositories {
         maven {
-            name  'reposilite'
-            url "http://${System.getenv('ARTIFACTORY_HOST')}/${System.getenv('ARTIFACTORY_REPOSITORY')}"
+            url 'http://artifactory.tunepoint.fun/releases'
             allowInsecureProtocol true
+        }
+        mavenCentral()
+    }
 
-            credentials {
-                username System.getenv('ARTIFACTORY_USERNAME')
-                password System.getenv('ARTIFACTORY_PASSWORD')
+    dependencyManagement {
+        imports {
+            mavenBom SpringBootPlugin.BOM_COORDINATES
+        }
+
+        dependencies {
+
+            dependency 'org.springframework.boot:spring-boot-starter:2.6.6'
+            dependency 'org.springframework.kafka:spring-kafka:2.8.4'
+            dependency 'org.springframework:spring-aspects:5.3.18'
+
+            dependency 'com.fasterxml.jackson.core:jackson-core:2.13.2'
+            dependency 'com.fasterxml.jackson.core:jackson-databind:2.13.2'
+            dependency 'org.projectlombok:lombok:1.18.20'
+
+            dependency 'org.aspectj:aspectjweaver:1.9.9.1'
+            dependency 'org.springframework.boot:spring-boot-starter-test:2.6.6'
+            dependency 'org.springframework.kafka:spring-kafka-test:2.8.4'
+        }
+    }
+
+    if (project.file('publish.gradle').exists()) {
+
+        publishing {
+            publications {
+                mavenJava(MavenPublication) {
+                    groupId project.group
+                    artifactId project.name
+                    version project.version
+
+                    artifact jar
+                }
+            }
+
+            repositories {
+                maven {
+                    name  'reposilite'
+                    url "http://${System.getenv('ARTIFACTORY_HOST')}/${System.getenv('ARTIFACTORY_REPOSITORY')}"
+                    allowInsecureProtocol true
+
+                    credentials {
+                        username System.getenv('ARTIFACTORY_USERNAME')
+                        password System.getenv('ARTIFACTORY_PASSWORD')
+                    }
+                }
             }
         }
     }

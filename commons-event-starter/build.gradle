@@ -1,0 +1,26 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+dependencies {
+    implementation project(':commons-event-model')
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.kafka:spring-kafka'
+    implementation 'org.springframework:spring-aspects'
+
+    implementation 'com.fasterxml.jackson.core:jackson-core'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'org.projectlombok:lombok'
+
+    compileOnly 'org.projectlombok:lombok'
+    runtimeOnly 'org.aspectj:aspectjweaver'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+    testImplementation 'org.projectlombok:lombok'
+}
+
+jar {
+    archiveName "${project.name}.jar"
+}
