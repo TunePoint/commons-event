@@ -4,6 +4,13 @@ plugins {
     id 'org.springframework.boot'
     id 'java-library'
     id 'maven-publish'
+    id 'io.spring.dependency-management'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom 'org.springframework.boot:spring-boot-dependencies:2.6.6.RELEASE'
+    }
 }
 
 dependencies {
@@ -31,4 +38,5 @@ bootJar {
 jar {
     enabled true
     archiveName "${project.name}.jar"
+    classifier ""
 }
