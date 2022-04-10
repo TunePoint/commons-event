@@ -16,14 +16,17 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.kafka:spring-kafka'
     implementation 'org.springframework:spring-aspects'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
     implementation 'com.fasterxml.jackson.core:jackson-core'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     implementation 'org.projectlombok:lombok'
 
     compileOnly 'org.projectlombok:lombok'
-    runtimeOnly 'org.aspectj:aspectjweaver'
+
     annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
     testImplementation 'org.projectlombok:lombok'
@@ -37,4 +40,8 @@ jar {
     enabled true
     archiveName "${project.name}.jar"
     classifier ""
+}
+
+tasks.named('compileJava') {
+    inputs.files(tasks.named('processResources'))
 }

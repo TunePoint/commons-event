@@ -2,12 +2,15 @@ package ua.tunepoint.event.starter.config;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,8 +35,10 @@ import ua.tunepoint.event.starter.kafka.message.Message;
 import ua.tunepoint.event.starter.publisher.EventPublisher;
 import ua.tunepoint.event.starter.registry.DomainRegistry;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Configuration
 @ConditionalOnBean({ DomainEventHandlers.class, DomainRegistry.class })
@@ -50,7 +55,22 @@ public class EventSourceAutoConfiguration {
     private EventProperties eventProperties;
 
     private final ObjectMapper objectMapper = new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .registerModule(new JavaTimeModule());
+
+    @Bean
+    @ConditionalOnProperty(value = "event.consumer.enabled", havingValue = "true")
+    public ContainerProperties containerProperties() {
+        String[] listenedTopics = domainRegistry.domainsWithRelation(DomainRelation.CONSUMER).toArray(new String[0]);
+        if (listenedTopics.length == 0) {
+            throw new BeanInitializationException("Event consumption enabled, you should provide at least one CONSUMER domain");
+        }
+
+        ContainerProperties containerProperties = new ContainerProperties(listenedTopics);
+        containerProperties.setMessageListener(kafkaListener());
+
+        return containerProperties;
+    }
 
     @Bean
     public MessageListener<String, Message> kafkaListener() {
@@ -58,16 +78,7 @@ public class EventSourceAutoConfiguration {
     }
 
     @Bean
-    public ContainerProperties containerProperties() {
-        ContainerProperties containerProperties = new ContainerProperties(
-                domainRegistry.domainsWithRelation(DomainRelation.CONSUMER).toArray(new String[0])
-        );
-        containerProperties.setMessageListener(kafkaListener());
-
-        return containerProperties;
-    }
-
-    @Bean
+    @ConditionalOnBean(ContainerProperties.class)
     public ConsumerFactory<String, Message> consumerFactory() {
         return new DefaultKafkaConsumerFactory<>(
                 consumerProperties(),
@@ -77,14 +88,14 @@ public class EventSourceAutoConfiguration {
     }
 
     @Bean
-    @Primary
+    @ConditionalOnBean({ContainerProperties.class, ConsumerFactory.class})
     public MessageListenerContainer messageListenerContainer() {
         return new ConcurrentMessageListenerContainer<>(consumerFactory(), containerProperties());
     }
 
-    @Bean
+    @Bean("consumerProperties")
     public Map<String, Object> consumerProperties() {
-        Map<String, Object> props = new HashMap<>();
+        Map<String, Object> props = new HashMap<>(extractConsumerProperties());
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, eventProperties.getBootstrapServers());
         props.put(ConsumerConfig.GROUP_ID_CONFIG, eventProperties.getServiceName());
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
@@ -109,12 +120,25 @@ public class EventSourceAutoConfiguration {
          return new KafkaEventPublisher(kafkaTemplate(), objectMapper, domainRegistry);
     }
 
-    @Bean
+    @Bean("producerProperties")
     public Map<String, Object> producerProperties() {
-        Map<String, Object> props = new HashMap<>();
+        Map<String, Object> props = new HashMap<>(extractProducerProperties());
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, eventProperties.getBootstrapServers());
-        props.put(ProducerConfig.RETRIES_CONFIG, 3);
 
         return props;
+    }
+
+    private Map<String, Object> extractConsumerProperties() {
+        return Optional.ofNullable(eventProperties)
+                .map(EventProperties::getConsumer)
+                .map(EventProperties.ConsumerProperties::getProperties)
+                .orElse(Collections.emptyMap());
+    }
+
+    private Map<String, Object> extractProducerProperties() {
+        return Optional.ofNullable(eventProperties)
+                .map(EventProperties::getProducer)
+                .map(EventProperties.ProducerProperties::getProperties)
+                .orElse(Collections.emptyMap());
     }
 }

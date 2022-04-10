@@ -57,13 +57,13 @@ subprojects {
 
             dependency 'org.springframework.boot:spring-boot-starter:2.6.6'
             dependency 'org.springframework.kafka:spring-kafka:2.8.4'
-            dependency 'org.springframework:spring-aspects:5.3.18'
+            dependency 'org.springframework.boot:spring-boot-configuration-processor:2.6.6'
 
             dependency 'com.fasterxml.jackson.core:jackson-core:2.13.2'
             dependency 'com.fasterxml.jackson.core:jackson-databind:2.13.2'
+            dependency 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.2'
             dependency 'org.projectlombok:lombok:1.18.20'
 
-            dependency 'org.aspectj:aspectjweaver:1.9.9.1'
             dependency 'org.springframework.boot:spring-boot-starter-test:2.6.6'
             dependency 'org.springframework.kafka:spring-kafka-test:2.8.4'
         }
