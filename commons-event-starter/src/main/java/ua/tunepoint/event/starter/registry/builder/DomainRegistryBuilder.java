@@ -10,12 +10,12 @@ public class DomainRegistryBuilder {
 
     private final DomainRegistry domainRegistry = new DomainRegistry();
 
-    public DomainRegistryBuilder register(String domain, DomainEventType[] eventTypes, DomainRelation relation) {
+    public DomainRegistryBuilder register(String domain, DomainEventType[] eventTypes, Set<DomainRelation> relation) {
         domainRegistry.register(domain, Set.of(eventTypes), relation);
         return this;
     }
 
-    public DomainRegistryBuilder register(String domain, Set<DomainEventType> eventTypes, DomainRelation relation) {
+    public DomainRegistryBuilder register(String domain, Set<DomainEventType> eventTypes, Set<DomainRelation> relation) {
         domainRegistry.register(domain, eventTypes, relation);
         return this;
     }

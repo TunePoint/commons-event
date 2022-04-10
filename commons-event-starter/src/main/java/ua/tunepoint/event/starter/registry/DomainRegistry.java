@@ -16,15 +16,17 @@ public class DomainRegistry {
 
     private final Map<DomainRelation, Set<String>> domainRelationRegistry = new HashMap<>();
 
-    public void register(String domain, Set<DomainEventType> events, DomainRelation relation) {
+    public void register(String domain, Set<DomainEventType> events, Set<DomainRelation> relations) {
         var eventRegistry = new EventRegistry(events);
 
         domainEventRegistry.put(domain, eventRegistry);
-        domainRelationRegistry.compute(relation, (k, v) -> {
-            v = v == null ? new HashSet<>() : v;
-            v.add(domain);
-            return v;
-        }) ;
+        relations.forEach((relation) -> {
+            domainRelationRegistry.compute(relation, (k, v) -> {
+                v = v == null ? new HashSet<>() : v;
+                v.add(domain);
+                return v;
+            }) ;
+        });
     }
 
     public EventRegistry domainEvents(String domain) {
