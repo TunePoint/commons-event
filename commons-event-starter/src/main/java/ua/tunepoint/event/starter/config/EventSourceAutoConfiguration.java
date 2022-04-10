@@ -41,14 +41,14 @@ import java.util.Map;
 import java.util.Optional;
 
 @Configuration
-@ConditionalOnBean({ DomainEventHandlers.class, DomainRegistry.class })
+@ConditionalOnBean({ DomainRegistry.class })
 @EnableConfigurationProperties(EventProperties.class)
 public class EventSourceAutoConfiguration {
 
     @Autowired
     private DomainRegistry domainRegistry;
 
-    @Autowired
+    @Autowired(required = false)
     private DomainEventHandlers domainEventHandlers;
 
     @Autowired
@@ -59,7 +59,7 @@ public class EventSourceAutoConfiguration {
             .registerModule(new JavaTimeModule());
 
     @Bean
-    @ConditionalOnProperty(value = "event.consumer.enabled", havingValue = "true")
+    @ConditionalOnBean(MessageListener.class)
     public ContainerProperties containerProperties() {
         String[] listenedTopics = domainRegistry.domainsWithRelation(DomainRelation.CONSUMER).toArray(new String[0]);
         if (listenedTopics.length == 0) {
@@ -73,6 +73,7 @@ public class EventSourceAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnBean(DomainEventHandlers.class)
     public MessageListener<String, Message> kafkaListener() {
         return new KafkaEventConsumer(domainEventHandlers, objectMapper);
     }

@@ -23,8 +23,6 @@ public class EventProperties {
     @NoArgsConstructor
     public static class ConsumerProperties {
 
-        private boolean enabled = false;
-
         private Map<String, Object> properties;
     }
 
