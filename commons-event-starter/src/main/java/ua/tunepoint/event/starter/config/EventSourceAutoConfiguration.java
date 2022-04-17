@@ -58,88 +58,93 @@ public class EventSourceAutoConfiguration {
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
             .registerModule(new JavaTimeModule());
 
-    @Bean
-    @ConditionalOnBean(MessageListener.class)
-    public ContainerProperties containerProperties() {
-        String[] listenedTopics = domainRegistry.domainsWithRelation(DomainRelation.CONSUMER).toArray(new String[0]);
-        if (listenedTopics.length == 0) {
-            throw new BeanInitializationException("Event consumption enabled, you should provide at least one CONSUMER domain");
+    @Configuration
+    @ConditionalOnBean(DomainEventHandlers.class)
+    public class EventSourceConsumerConfiguration {
+
+        @Bean
+        public ContainerProperties containerProperties() {
+            String[] listenedTopics = domainRegistry.domainsWithRelation(DomainRelation.CONSUMER).toArray(new String[0]);
+            if (listenedTopics.length == 0) {
+                throw new BeanInitializationException("Event consumption enabled, you should provide at least one CONSUMER domain");
+            }
+
+            ContainerProperties containerProperties = new ContainerProperties(listenedTopics);
+            containerProperties.setMessageListener(kafkaListener());
+
+            return containerProperties;
         }
 
-        ContainerProperties containerProperties = new ContainerProperties(listenedTopics);
-        containerProperties.setMessageListener(kafkaListener());
+        @Bean
+        public MessageListener<String, Message> kafkaListener() {
+            return new KafkaEventConsumer(domainEventHandlers, objectMapper);
+        }
 
-        return containerProperties;
+        @Bean
+        public ConsumerFactory<String, Message> consumerFactory() {
+            return new DefaultKafkaConsumerFactory<>(
+                    consumerProperties(),
+                    StringDeserializer::new,
+                    () -> new ErrorHandlingDeserializer<>(new JsonDeserializer<>(Message.class))
+            );
+        }
+
+        @Bean
+        public MessageListenerContainer messageListenerContainer() {
+            return new ConcurrentMessageListenerContainer<>(consumerFactory(), containerProperties());
+        }
+
+        @Bean("consumerProperties")
+        public Map<String, Object> consumerProperties() {
+            Map<String, Object> props = new HashMap<>(extractConsumerProperties());
+            props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, eventProperties.getBootstrapServers());
+            props.put(ConsumerConfig.GROUP_ID_CONFIG, eventProperties.getServiceName());
+            props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
+
+            return props;
+        }
+
+        private Map<String, Object> extractConsumerProperties() {
+            return Optional.ofNullable(eventProperties)
+                    .map(EventProperties::getConsumer)
+                    .map(EventProperties.ConsumerProperties::getProperties)
+                    .orElse(Collections.emptyMap());
+        }
     }
 
-    @Bean
-    @ConditionalOnBean(DomainEventHandlers.class)
-    public MessageListener<String, Message> kafkaListener() {
-        return new KafkaEventConsumer(domainEventHandlers, objectMapper);
-    }
+    @Configuration
+    public class EventSourceProducerConfiguration {
 
-    @Bean
-    @ConditionalOnBean(ContainerProperties.class)
-    public ConsumerFactory<String, Message> consumerFactory() {
-        return new DefaultKafkaConsumerFactory<>(
-                consumerProperties(),
-                StringDeserializer::new,
-                () -> new ErrorHandlingDeserializer<>(new JsonDeserializer<>(Message.class))
-        );
-    }
+        @Bean
+        public ProducerFactory<String, Message> producerFactory() {
+            return new DefaultKafkaProducerFactory<>(
+                    producerProperties(), StringSerializer::new, JsonSerializer::new
+            );
+        }
 
-    @Bean
-    @ConditionalOnBean({ContainerProperties.class, ConsumerFactory.class})
-    public MessageListenerContainer messageListenerContainer() {
-        return new ConcurrentMessageListenerContainer<>(consumerFactory(), containerProperties());
-    }
+        @Bean
+        public KafkaTemplate<String, Message> kafkaTemplate() {
+            return new KafkaTemplate<>(producerFactory());
+        }
 
-    @Bean("consumerProperties")
-    public Map<String, Object> consumerProperties() {
-        Map<String, Object> props = new HashMap<>(extractConsumerProperties());
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, eventProperties.getBootstrapServers());
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, eventProperties.getServiceName());
-        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
+        @Bean
+        public EventPublisher eventPublisher() {
+            return new KafkaEventPublisher(kafkaTemplate(), objectMapper, domainRegistry);
+        }
 
-        return props;
-    }
+        @Bean("producerProperties")
+        public Map<String, Object> producerProperties() {
+            Map<String, Object> props = new HashMap<>(extractProducerProperties());
+            props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, eventProperties.getBootstrapServers());
 
-    @Bean
-    public ProducerFactory<String, Message> producerFactory() {
-        return new DefaultKafkaProducerFactory<>(
-                producerProperties(), StringSerializer::new, JsonSerializer::new
-        );
-    }
+            return props;
+        }
 
-    @Bean
-    public KafkaTemplate<String, Message> kafkaTemplate() {
-        return new KafkaTemplate<>(producerFactory());
-    }
-
-    @Bean
-    public EventPublisher eventPublisher() {
-         return new KafkaEventPublisher(kafkaTemplate(), objectMapper, domainRegistry);
-    }
-
-    @Bean("producerProperties")
-    public Map<String, Object> producerProperties() {
-        Map<String, Object> props = new HashMap<>(extractProducerProperties());
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, eventProperties.getBootstrapServers());
-
-        return props;
-    }
-
-    private Map<String, Object> extractConsumerProperties() {
-        return Optional.ofNullable(eventProperties)
-                .map(EventProperties::getConsumer)
-                .map(EventProperties.ConsumerProperties::getProperties)
-                .orElse(Collections.emptyMap());
-    }
-
-    private Map<String, Object> extractProducerProperties() {
-        return Optional.ofNullable(eventProperties)
-                .map(EventProperties::getProducer)
-                .map(EventProperties.ProducerProperties::getProperties)
-                .orElse(Collections.emptyMap());
+        private Map<String, Object> extractProducerProperties() {
+            return Optional.ofNullable(eventProperties)
+                    .map(EventProperties::getProducer)
+                    .map(EventProperties.ProducerProperties::getProperties)
+                    .orElse(Collections.emptyMap());
+        }
     }
 }
