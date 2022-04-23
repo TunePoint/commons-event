@@ -48,8 +48,6 @@ public class EventSourceAutoConfiguration {
     @Autowired
     private DomainRegistry domainRegistry;
 
-    @Autowired(required = false)
-    private DomainEventHandlers domainEventHandlers;
 
     @Autowired
     private EventProperties eventProperties;
@@ -61,6 +59,9 @@ public class EventSourceAutoConfiguration {
     @Configuration
     @ConditionalOnBean(DomainEventHandlers.class)
     public class EventSourceConsumerConfiguration {
+
+        @Autowired
+        private DomainEventHandlers domainEventHandlers;
 
         @Bean
         public ContainerProperties containerProperties() {
